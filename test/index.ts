@@ -19,8 +19,10 @@ const { assert } = chai;
 mocha.setup('tdd');
 
 (async () => {
-  await promisifyRequest(indexedDB.deleteDatabase('keyval-store'));
-  const customStore = createStore('custom-db', 'custom-kv');
+  beforeEach(async () => {
+    await promisifyRequest(indexedDB.deleteDatabase('keyval-store'));
+    await promisifyRequest(indexedDB.deleteDatabase('custom-db'));
+  });
 
   suite('The basics', () => {
     test('get & set', async () => {
@@ -60,8 +62,6 @@ mocha.setup('tdd');
   });
 
   suite('get & set', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     // Just making sure I don't accidentally cast types.
     test('number keys', async () => {
       await set(123, 'hello');
@@ -102,16 +102,25 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
-      await set('foo', 'bar', customStore);
+      const customStoreA = createStore('custom-db', 'storeA');
+      const customStoreB = createStore('custom-db', 'storeB');
+
+      await set('foo', 'bar', customStoreA);
+      await set('foo', 'baz', customStoreB);
       assert.strictEqual(
         await get('foo'),
         undefined,
         `Doesn't exist in main db`,
       );
       assert.strictEqual(
-        await get('foo', customStore),
+        await get('foo', customStoreA),
         'bar',
-        `Exists in custom db`,
+        `Exists in custom db A`,
+      );
+      assert.strictEqual(
+        await get('foo', customStoreB),
+        'baz',
+        `Exists in custom db B`,
       );
     });
 
@@ -154,8 +163,6 @@ mocha.setup('tdd');
   });
 
   suite('del', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('error types', async () => {
       try {
         // @ts-expect-error
@@ -171,6 +178,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await set('foo', 'bar');
       await set('foo', 'yo', customStore);
       await del('foo', customStore);
@@ -190,9 +199,9 @@ mocha.setup('tdd');
   });
 
   suite('clear', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await set('foo', 'bar');
       await set('foo', 'yo', customStore);
       await clear(customStore);
@@ -212,8 +221,6 @@ mocha.setup('tdd');
   });
 
   suite('keys', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       await set('foo', 'bar');
       await set(123, '456');
@@ -221,6 +228,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await set('foo', 'bar');
       await set(123, '456', customStore);
       await set('hello', 'world', customStore);
@@ -229,8 +238,6 @@ mocha.setup('tdd');
   });
 
   suite('values', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       await set('foo', 'bar');
       await set(123, '456');
@@ -238,6 +245,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await set('foo', 'bar');
       await set(123, '456', customStore);
       await set('hello', 'world', customStore);
@@ -250,8 +259,6 @@ mocha.setup('tdd');
   });
 
   suite('entries', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       await set('foo', 'bar');
       await set(123, '456');
@@ -266,6 +273,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await set('foo', 'bar');
       await set(123, '456', customStore);
       await set('hello', 'world', customStore);
@@ -281,8 +290,6 @@ mocha.setup('tdd');
   });
 
   suite('setMany', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       await setMany([
         ['foo', 'bar'],
@@ -309,6 +316,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await setMany([
         ['foo', 'bar'],
         [123, '456'],
@@ -341,8 +350,6 @@ mocha.setup('tdd');
   });
 
   suite('getMany', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       await setMany([
         ['foo', 'bar'],
@@ -362,6 +369,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       await setMany([
         ['foo', 'bar'],
         [123, '456'],
@@ -378,8 +387,6 @@ mocha.setup('tdd');
   });
 
   suite('update', () => {
-    setup(() => Promise.all([clear(), clear(customStore)]));
-
     test('basics', async () => {
       const increment: (old: number | undefined) => number = (old) =>
         (old || 0) + 1;
@@ -407,6 +414,8 @@ mocha.setup('tdd');
     });
 
     test('custom store', async () => {
+      const customStore = createStore('custom-db', 'custom-kv');
+
       const increment: (old: number | undefined) => number = (old) =>
         (old || 0) + 1;
 
