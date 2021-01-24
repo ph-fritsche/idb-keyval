@@ -15,7 +15,7 @@ export function createStore(dbName: string, storeName: string): UseStore {
   const dbp = promisifyRequest(request);
 
   dbp.then((result) => {
-    if (!Array.from(result.objectStoreNames).includes(storeName)) {
+    if (!result.objectStoreNames.contains(storeName)) {
       result.createObjectStore(storeName);
     }
   });
