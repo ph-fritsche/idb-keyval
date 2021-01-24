@@ -10,14 +10,18 @@ export function promisifyRequest<T = undefined>(
 }
 
 export function createStore(dbName: string, storeName: string): UseStore {
-  const request = indexedDB.open(dbName);
+  function open(version?: number) {
+    const request = indexedDB.open(dbName, version);
+    request.onupgradeneeded = () => request.result.createObjectStore(storeName);
 
-  const dbp = promisifyRequest(request);
+    return promisifyRequest(request);
+  }
 
-  dbp.then((result) => {
+  const dbp = open().then((result) => {
     if (!result.objectStoreNames.contains(storeName)) {
-      result.createObjectStore(storeName);
+      return open(result.version + 1);
     }
+    return result;
   });
 
   return (txMode, callback) =>
